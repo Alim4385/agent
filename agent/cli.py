@@ -78,16 +78,22 @@ def run_repl(stream: bool) -> None:
                 if src_block:
                     print(f"\n{src_block}")
 
-                history.add_user(user_input)
-                history.add_assistant(full_text)
+                if full_text.strip():
+                    history.add_user(user_input)
+                    history.add_assistant(full_text)
+                else:
+                    print("[Xəbərdarlıq] LLM boş cavab qaytardı — tarixçəyə yazılmadı.")
             else:
                 content, sources = answer(user_input, history, stream=False)
                 print(f"\n{content}\n")
                 src_block = format_sources(sources)
                 if src_block:
                     print(src_block)
-                history.add_user(user_input)
-                history.add_assistant(content)
+                if content.strip():
+                    history.add_user(user_input)
+                    history.add_assistant(content)
+                else:
+                    print("[Xəbərdarlıq] LLM boş cavab qaytardı — tarixçəyə yazılmadı.")
 
         except LLMConnectionError as e:
             print(f"\n[Xəta] {e}\n")

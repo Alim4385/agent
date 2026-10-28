@@ -32,12 +32,22 @@ Cavab + mənbə siyahısı ([1], [2] sitatları ilə)
 
 ```bash
 pip install -r requirements.txt --break-system-packages
+# və ya paket kimi:
+pip install -e .
 ```
+
+> **Qeyd:** `trafilatura` yeni `lxml` versiyaları ilə işləmək üçün ayrıca
+> `lxml_html_clean` paketini tələb edir — o, `requirements.txt`-ə daxil edilib.
+> `scikit-learn` olmasa da proqram işləyir (rerank açar-söz üsuluna keçir).
 
 ## İşə salma
 
 ```bash
 python run.py
+# eyni şeydir:
+python -m agent
+# pip install -e . etmisinizsə:
+web-agent
 ```
 
 Seçimlər:
@@ -52,6 +62,9 @@ Seçimlər:
 ## Konfiqurasiya
 
 Bütün parametrlər ətraf mühit dəyişənləri ilə idarə olunur — bax `.env.example`.
+Layihə kökündə `.env` faylı yaratsanız (`cp .env.example .env`), dəyərlər
+avtomatik oxunur; artıq `export` edilmiş dəyişənlər həmişə üstün gəlir.
+
 Əsas dəyişənlər:
 
 - `LLM_BASE_URL` — serverin ünvanı (default: `http://127.0.0.1:8080/v1`)
@@ -62,18 +75,22 @@ Bütün parametrlər ətraf mühit dəyişənləri ilə idarə olunur — bax `.
 ## Modul strukturu
 
 ```
-agent/
-├── config.py          # Mərkəzi konfiqurasiya (env-var override dəstəyi ilə)
-├── exceptions.py       # Layihəyə xas xəta tipləri
-├── logging_setup.py    # Struktur logging
-├── search.py            # DuckDuckGo axtarışı + retry/backoff
-├── fetch.py              # Paralel tam-səhifə mətn çıxarma (trafilatura)
-├── rerank.py              # 3-səviyyəli reranking strategiyası
-├── llm_client.py           # Streaming/qeyri-streaming LLM çağırışı
-├── history.py               # Söhbət tarixçəsi (avtomatik budama)
-├── pipeline.py                # Bütün mərhələləri birləşdirən orkestrasiya
-└── cli.py                      # İnteraktiv REPL
-run.py                            # Giriş nöqtəsi
+.
+├── run.py                        # Giriş nöqtəsi (python run.py)
+├── requirements.txt
+├── pyproject.toml
+├── .env.example
+└── agent/                        # Python paketi (__init__.py, __main__.py)
+    ├── config.py                 # Mərkəzi konfiqurasiya (.env + env override)
+    ├── exceptions.py              # Layihəyə xas xəta tipləri
+    ├── logging_setup.py           # Struktur logging
+    ├── search.py                  # DuckDuckGo axtarışı + retry/backoff
+    ├── fetch.py                   # Paralel tam-səhifə mətn çıxarma (trafilatura)
+    ├── rerank.py                   # 3-səviyyəli reranking strategiyası
+    ├── llm_client.py               # Streaming/qeyri-streaming LLM çağırışı
+    ├── history.py                   # Söhbət tarixçəsi (avtomatik budama)
+    ├── pipeline.py                   # Bütün mərhələləri birləşdirən orkestrasiya
+    └── cli.py                         # İnteraktiv REPL
 ```
 
 ## Genişləndirmə fikirləri

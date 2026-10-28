@@ -80,22 +80,28 @@ def chat_completion_stream(messages: List[Dict[str, str]]) -> Generator[str, Non
             raise LLMResponseError(f"LLM cavabı emal edilə bilmədi: {e}") from e
 
     got_any_chunk = False
-    for raw_line in resp.iter_lines(decode_unicode=True):
-        if not raw_line or not raw_line.startswith("data:"):
-            continue
-        chunk = raw_line[len("data:"):].strip()
-        if chunk == "[DONE]":
-            break
-        try:
-            payload = json.loads(chunk)
-            delta = payload["choices"][0].get("delta", {})
-            token = delta.get("content")
-            if token:
-                got_any_chunk = True
-                yield token
-        except (ValueError, KeyError, IndexError) as e:
-            log.debug("Stream chunk parse edilə bilmədi, ötürülür: %s (%r)", e, chunk)
-            continue
+    try:
+        for raw_line in resp.iter_lines(decode_unicode=True):
+            if not raw_line or not raw_line.startswith("data:"):
+                continue
+            chunk = raw_line[len("data:"):].strip()
+            if chunk == "[DONE]":
+                break
+            try:
+                payload = json.loads(chunk)
+                delta = payload["choices"][0].get("delta", {})
+                token = delta.get("content")
+                if token:
+                    got_any_chunk = True
+                    yield token
+            except (ValueError, KeyError, IndexError) as e:
+                log.debug("Stream chunk parse edilə bilmədi, ötürülür: %s (%r)", e, chunk)
+                continue
+    except requests.exceptions.RequestException as e:
+        # Axın ortasında qopma — yuxarıda artıq göstərilən mətn itirilməsin deyə
+        # yalnız xəbərdarlıq edirik və axını dayandırırıq.
+        log.warning("Streaming zamanı bağlantı kəsildi: %s", e)
+        raise LLMConnectionError(f"LLM axını kəsildi: {e}") from e
 
     if not got_any_chunk:
         log.warning("Streaming heç bir token qaytarmadı — server konfiqurasiyasını yoxlayın.")

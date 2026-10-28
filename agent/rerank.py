@@ -35,6 +35,9 @@ def _get_embeddings(texts: List[str]) -> List[List[float]] | None:
         )
         resp.raise_for_status()
         data = resp.json()["data"]
+        # Bəzi serverlər nəticələri sırasız qaytarır — "index" varsa ona görə düzürük.
+        if all(isinstance(item, dict) and "index" in item for item in data):
+            data = sorted(data, key=lambda item: item["index"])
         return [item["embedding"] for item in data]
     except Exception as e:
         log.debug("Embeddings endpoint mövcud deyil ya da xəta verdi: %s", e)
@@ -53,7 +56,7 @@ def _cosine(a: List[float], b: List[float]) -> float:
 def _rerank_with_embeddings(query: str, results: List[SearchResult]) -> List[SearchResult] | None:
     texts = [query] + [r.display_text for r in results]
     embeddings = _get_embeddings(texts)
-    if embeddings is None:
+    if embeddings is None or len(embeddings) != len(texts):
         return None
 
     query_vec, doc_vecs = embeddings[0], embeddings[1:]
@@ -103,4 +106,8 @@ def rerank(query: str, results: List[SearchResult]) -> List[SearchResult]:
     if ranked is None:
         ranked = _rerank_with_keyword_overlap(query, results)
 
-    return ranked[: CONFIG.rerank_top_k]
+    top = ranked[: CONFIG.rerank_top_k]
+    # Sitat nömrələri ([1], [2] ...) kontekstdəki sıra ilə üst-üstə düşməlidir.
+    for new_rank, result in enumerate(top, start=1):
+        result.rank = new_rank
+    return top

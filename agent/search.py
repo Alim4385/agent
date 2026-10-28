@@ -6,8 +6,20 @@ import time
 from dataclasses import dataclass, field
 from typing import List
 
-from duckduckgo_search import DDGS
-from duckduckgo_search.exceptions import DuckDuckGoSearchException
+try:  # yeni paket adı (ddgs >= 9) — köhnə duckduckgo-search ilə geriyə uyğunluq
+    from ddgs import DDGS
+except ImportError:  # pragma: no cover - quraşdırılmış versiyadan asılıdır
+    from duckduckgo_search import DDGS
+
+try:
+    from ddgs.exceptions import DDGSException as _BaseDDGError
+except Exception:  # noqa: BLE001
+    try:
+        from duckduckgo_search.exceptions import (
+            DuckDuckGoSearchException as _BaseDDGError,
+        )
+    except Exception:  # noqa: BLE001
+        _BaseDDGError = Exception
 
 from .config import CONFIG
 from .exceptions import SearchError
@@ -53,7 +65,7 @@ def search_web(query: str) -> List[SearchResult]:
             log.info("Axtarış uğurlu: %d nəticə tapıldı (%r)", len(results), query)
             return results
 
-        except DuckDuckGoSearchException as e:
+        except _BaseDDGError as e:
             last_error = e
             log.warning("Axtarış cəhdi %d uğursuz: %s", attempt, e)
         except Exception as e:  # gözlənilməz xətalar da tutulur
