@@ -4,6 +4,32 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
+
+
+def _load_dotenv() -> None:
+    """Layihə kökündəki `.env` faylını (varsa) yükləyir.
+
+    Artıq mövcud olan ətraf mühit dəyişənləri həmişə üstün gəlir, yəni
+    `export LLM_BASE_URL=...` kimi açıq override-lar pozulmur.
+    """
+    candidates = [Path.cwd() / ".env", Path(__file__).resolve().parent.parent / ".env"]
+    for path in candidates:
+        if not path.is_file():
+            continue
+        try:
+            for raw_line in path.read_text(encoding="utf-8").splitlines():
+                line = raw_line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, _, value = line.partition("=")
+                key = key.strip()
+                value = value.strip().strip('"').strip("'")
+                if key and key not in os.environ:
+                    os.environ[key] = value
+        except OSError:
+            pass  # oxuna bilmirsə, sadəcə env dəyişənləri ilə davam edirik
+        return
 
 
 def _env_str(key: str, default: str) -> str:
@@ -22,6 +48,9 @@ def _env_float(key: str, default: float) -> float:
         return float(os.environ.get(key, default))
     except ValueError:
         return default
+
+
+_load_dotenv()
 
 
 @dataclass(frozen=True)

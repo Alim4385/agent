@@ -25,6 +25,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--no-fetch", action="store_true", help="Tam səhifə çəkməni deaktiv et (sürətli, daha az dəqiq)")
     parser.add_argument("--top-k", type=int, default=None, help="Rerank sonrası neçə mənbə saxlansın")
     parser.add_argument("--model", type=str, default=None, help="LLM model adı (server tərəfindən dəstəklənməlidir)")
+    parser.add_argument(
+        "--doctor",
+        action="store_true",
+        help="Kənarlaşmadan əvvəl sistemin bütün mərhələlərini yoxla (axtarış, fetch, LLM)",
+    )
     return parser.parse_args()
 
 
@@ -78,16 +83,22 @@ def run_repl(stream: bool) -> None:
                 if src_block:
                     print(f"\n{src_block}")
 
-                history.add_user(user_input)
-                history.add_assistant(full_text)
+                if full_text.strip():
+                    history.add_user(user_input)
+                    history.add_assistant(full_text)
+                else:
+                    print("[Xəbərdarlıq] LLM boş cavab qaytardı — tarixçəyə yazılmadı.")
             else:
                 content, sources = answer(user_input, history, stream=False)
                 print(f"\n{content}\n")
                 src_block = format_sources(sources)
                 if src_block:
                     print(src_block)
-                history.add_user(user_input)
-                history.add_assistant(content)
+                if content.strip():
+                    history.add_user(user_input)
+                    history.add_assistant(content)
+                else:
+                    print("[Xəbərdarlıq] LLM boş cavab qaytardı — tarixçəyə yazılmadı.")
 
         except LLMConnectionError as e:
             print(f"\n[Xəta] {e}\n")
@@ -104,6 +115,10 @@ def run_repl(stream: bool) -> None:
 
 def main() -> None:
     args = parse_args()
+    if args.doctor:
+        from .doctor import run
+
+        raise SystemExit(run())
     apply_overrides(args)
     stream = CONFIG.stream and not args.no_stream
     run_repl(stream=stream)
