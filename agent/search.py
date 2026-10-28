@@ -40,6 +40,18 @@ class SearchResult:
         return self.full_text.strip() if self.full_text.strip() else self.snippet
 
 
+def _field(item, *names: str) -> str:
+    """Nəticə dict (köhnə API) və ya obyekt (yeni `ddgs` API) ola bilər."""
+    for name in names:
+        if isinstance(item, dict):
+            value = item.get(name)
+        else:
+            value = getattr(item, name, None)
+        if value:
+            return str(value)
+    return ""
+
+
 def search_web(query: str) -> List[SearchResult]:
     """DuckDuckGo-da axtarış edir. Xəta zamanı exponential backoff ilə retry edir."""
     last_error: Exception | None = None
@@ -55,15 +67,26 @@ def search_web(query: str) -> List[SearchResult]:
 
             results = [
                 SearchResult(
-                    title=r.get("title", "") or "Başlıqsız",
-                    url=r.get("href", "") or "",
-                    snippet=r.get("body", "") or "",
+                    title=_field(r, "title") or "Başlıqsız",
+                    url=_field(r, "href") or _field(r, "url"),
+                    snippet=_field(r, "body") or _field(r, "snippet"),
                     rank=i,
                 )
                 for i, r in enumerate(raw, start=1)
             ]
-            log.info("Axtarış uğurlu: %d nəticə tapıldı (%r)", len(results), query)
-            return results
+            results = [r for r in results if r.url]
+            # Eyni link bir neçə dəfə gələ bilər — təkrarları çıxarırıq.
+            unique: List[SearchResult] = []
+            seen = set()
+            for r in results:
+                if r.url in seen:
+                    continue
+                seen.add(r.url)
+                r.rank = len(unique) + 1
+                unique.append(r)
+
+            log.info("Axtarış uğurlu: %d nəticə tapıldı (%r)", len(unique), query)
+            return unique
 
         except _BaseDDGError as e:
             last_error = e

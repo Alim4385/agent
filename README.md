@@ -59,6 +59,30 @@ Seçimlər:
 | `--top-k N`    | Rerank sonrası LLM-ə neçə mənbə ötürüləcəyini təyin edir |
 | `--model NAME` | Server üzərindəki model adını göstərir              |
 
+## Yoxlama (diaqnostika)
+
+Sistemin veb hissəsinin həqiqətən işlədiyini yoxlamaq üçün:
+
+```bash
+# 1) Bütün mərhələlər: asılılıqlar, LLM, embeddings, axtarış, fetch, pipeline
+python -m agent.doctor
+#    eyni şeydir: python run.py --doctor
+#    yalnız şəbəkəsiz yoxlamalar:
+python -m agent.doctor --offline
+
+# 2) Canlı yoxlama — real DuckDuckGo + real səhifələr (mock yoxdur)
+python tests/live_check.py --query "Azərbaycan paytaxtı" --pages 3
+
+# 3) Oflayn testlər — lokal saytlar + lokal LLM serveri ilə tam zəncir
+python -m unittest discover -s tests -v
+```
+
+`agent/doctor.py` hər mərhələ üçün `✓` / `✗` və problem halında konkret işarə
+göstərir; `tests/test_web_pipeline.py` isə 10 testlə axtarışın parse edilməsini,
+təkrarların çıxarılmasını, reklamın təmizlənməsini, rerank sıralamasını, sitat
+nömrələrini, streaming/qeyri-streaming cavabı və şəbəkə xətası zamanı
+davranışı yoxlayır.
+
 ## Konfiqurasiya
 
 Bütün parametrlər ətraf mühit dəyişənləri ilə idarə olunur — bax `.env.example`.
