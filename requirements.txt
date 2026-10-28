@@ -1,9 +1,0 @@
-requests>=2.31
-# Axtarış: yeni paket adı (ddgs >= 9). Köhnə "duckduckgo-search" da dəstəklənir.
-ddgs>=9.0
-trafilatura>=1.8
-# trafilatura üçün: lxml>=5.3 ilə "lxml.html.clean" ayrı pakete köçüb,
-# bu olmadan `import trafilatura` ImportError verir.
-lxml_html_clean>=0.1
-# İstəyə bağlı: TF-IDF reranking üçün (yoxdursa açar-söz üsuluna keçir).
-scikit-learn>=1.3

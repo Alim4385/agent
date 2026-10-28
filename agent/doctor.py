@@ -1,11 +1,11 @@
 """`python -m agent.doctor` — sistemin bütün mərhələlərini canlı yoxlayır.
 
 Hər mərhələ üçün ✓ / ✗ nəticə və problem halında konkret işarə göstərilir:
-  1) asılılıqlar (requests, ddgs/duckduckgo_search, trafilatura, sklearn)
+  1) mühit (Python versiyası, xarici paket tələb olunmur)
   2) LLM serveri (/chat/completions)
   3) embeddings endpoint-i (rerank üçün, məcburi deyil)
-  4) real veb axtarışı (DuckDuckGo)
-  5) real səhifə çəkmə + mətn çıxarma (trafilatura)
+  4) real veb axtarışı (DuckDuckGo HTML interfeysi)
+  5) real səhifə çəkmə + mətn çıxarma (daxili html_text)
   6) tam pipeline (axtarış → fetch → rerank → LLM)
 
 İstifadə:
@@ -57,6 +57,17 @@ class Report:
             self.add(name, FAIL, f"{type(e).__name__}: {e}")
             return False
 
+    def check_optional(self, name: str, fn: Callable[[], str]) -> bool:
+        """Məcburi olmayan yoxlama: uğursuzluq `!` kimi göstərilir, işi dayandırmır."""
+        started = time.time()
+        try:
+            detail = fn()
+            self.add(name, OK, f"{detail} ({time.time() - started:.1f}s)")
+            return True
+        except Exception as e:  # noqa: BLE001
+            self.add_optional(name, WARN, f"{e} ({time.time() - started:.1f}s)")
+            return False
+
     @property
     def failed(self) -> List[str]:
         return [
@@ -88,30 +99,29 @@ class Report:
         print("\nİşarələr:")
         print("  • LLM serveri: serverin işlədiyini və LLM_BASE_URL-i yoxlayın")
         print("  • Axtarış: internet/DPI/proxy maneəsi ola bilər (şirkət şəbəkəsi?)")
-        print("  • trafilatura: `pip install -r requirements.txt` yenidən icra edin")
+        print("  • Python 3.10+ lazımdır; xarici paket tələb olunmur (stdlib kifayətdir)")
+        print("  • Səhifə çəkmə: bəzi saytlar bot UA-sını bloklayır (USER_AGENT dəyişənini dəyişin)")
         return 1
 
 
 def _check_deps() -> str:
+    """Xarici paket tələb olunmur — yalnız Python versiyası və stdlib modulları yoxlanılır."""
+    import sys
+
+    if sys.version_info < (3, 10):
+        raise RuntimeError(
+            f"Python 3.10+ lazımdır, hazırda {sys.version_info.major}.{sys.version_info.minor}"
+        )
+    required = ("urllib.request", "html.parser", "json", "gzip", "zlib", "concurrent.futures")
     missing = []
-    for module in ("requests", "trafilatura"):
+    for module in required:
         try:
             __import__(module)
-        except ImportError:
+        except ImportError:  # pragma: no cover — stdlib həmişə mövcuddur
             missing.append(module)
-    try:
-        import ddgs  # noqa: F401
-        engine = "ddgs"
-    except ImportError:
-        try:
-            import duckduckgo_search  # noqa: F401
-            engine = "duckduckgo_search"
-        except ImportError:
-            missing.append("ddgs")
-            engine = "yoxdur"
     if missing:
-        raise ImportError("çatışmayan paket(lər): " + ", ".join(missing))
-    return f"hazırdır (axtarış mühərriki: {engine})"
+        raise ImportError("standart kitabxana natamamdır: " + ", ".join(missing))
+    return f"Python {sys.version.split()[0]}, xarici paket tələb olunmur (stdlib)"
 
 
 def _check_llm() -> str:
@@ -150,10 +160,6 @@ def _check_search(query: str) -> str:
 def _check_fetch(query: str) -> str:
     from .fetch import enrich_with_full_text
     from .search import search_web
-    from . import fetch as fetch_module
-
-    if not fetch_module._HAS_TRAFILATURA:  # noqa: SLF001
-        raise RuntimeError("trafilatura quraşdırılmayıb — yalnız snippet istifadə olunacaq")
 
     results = search_web(query)[:3]
     if not results:
@@ -192,13 +198,12 @@ def run(offline: bool = False, query: str = TEST_QUERY) -> int:
         return report.summary()
 
     llm_ok = report.check("LLM serveri", _check_llm)
-    if not report.check("Embeddings (istəyə bağlı)", _check_embeddings):
-        report.add_optional("Embeddings (istəyə bağlı)", WARN, "rerank TF-IDF/açar-söz üsuluna keçəcək")
-    search_ok = report.check("Veb axtarışı (DuckDuckGo)", lambda: _check_search(query))
+    report.check_optional("Embeddings (istəyə bağlı)", _check_embeddings)
+    search_ok = report.check("Veb axtarışı (DuckDuckGo HTML)", lambda: _check_search(query))
     if search_ok:
-        report.check("Səhifə çəkmə (trafilatura)", lambda: _check_fetch(query))
+        report.check("Səhifə çəkmə + mətn çıxarma", lambda: _check_fetch(query))
     else:
-        report.add("Səhifə çəkmə (trafilatura)", SKIP, "axtarış nəticəsi olmadığı üçün keçildi")
+        report.add("Səhifə çəkmə + mətn çıxarma", SKIP, "axtarış nəticəsi olmadığı üçün keçildi")
 
     if llm_ok:
         report.check("Tam pipeline", lambda: _check_pipeline(query))

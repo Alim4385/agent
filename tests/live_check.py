@@ -1,7 +1,7 @@
 """Canlı yoxlama: real internetdə axtarış + real səhifə çəkmə.
 
 Bu skript mock istifadə etmir — DuckDuckGo-ya real sorğu göndərir və tapılan
-linklərdən bir neçəsini real olaraq çəkib trafilatura ilə mətn çıxarır.
+linklərdən bir neçəsini real olaraq çəkib daxili `html_text` modulu ilə mətn çıxarır.
 İnternetə çıxışı olan maşında işə salın:
 
     python tests/live_check.py "Azərbaycan paytaxtı"

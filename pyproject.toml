@@ -4,16 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "web-agent"
-version = "1.0.0"
-description = "Axtarışla gücləndirilmiş yerli LLM agenti"
+version = "2.0.0"
+description = "Axtarışla gücləndirilmiş yerli LLM agenti — sıfır xarici asılılıq (yalnız stdlib)"
 requires-python = ">=3.10"
-dependencies = [
-    "requests>=2.31",
-    "ddgs>=9.0",
-    "trafilatura>=1.8",
-    "lxml_html_clean>=0.1",
-    "scikit-learn>=1.3",
-]
+dependencies = []          # xarici paket yoxdur: hər şey Python standart kitabxanası ilə
 
 [project.scripts]
 web-agent = "agent.cli:main"
