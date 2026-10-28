@@ -68,11 +68,13 @@ class Config:
     search_max_results: int = _env_int("SEARCH_MAX_RESULTS", 6)
     search_retries: int = _env_int("SEARCH_RETRIES", 2)
     search_backoff_seconds: float = _env_float("SEARCH_BACKOFF", 1.5)
+    search_timeout: int = _env_int("SEARCH_TIMEOUT", 15)
 
     # Səhifə çəkmə (full-text fetch)
     fetch_enabled: bool = _env_str("FETCH_ENABLED", "true").lower() == "true"
     fetch_timeout: int = _env_int("FETCH_TIMEOUT", 8)
     fetch_max_chars: int = _env_int("FETCH_MAX_CHARS", 4000)
+    fetch_max_bytes: int = _env_int("FETCH_MAX_BYTES", 2_000_000)
     fetch_concurrency: int = _env_int("FETCH_CONCURRENCY", 5)
 
     # Reranking
@@ -87,7 +89,12 @@ class Config:
 
     # Logging
     log_level: str = _env_str("LOG_LEVEL", "INFO")
-    user_agent: str = "Mozilla/5.0 (compatible; WebAgent/1.0; +local-research-tool)"
+    # Real brauzer UA-sı — DuckDuckGo və bir çox sayt sadə bot UA-sını rədd edir
+    user_agent: str = _env_str(
+        "USER_AGENT",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+    )
 
     @property
     def chat_url(self) -> str:
